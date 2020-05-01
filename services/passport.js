@@ -23,32 +23,29 @@ passport.use(
       callbackURL: '/auth/google/callback',
       proxy: true
     },
-    (accessToken, refreshToken, profile, done) => {
+    async (accessToken, refreshToken, profile, done) => {
       console.log('access token: ', accessToken);
       console.log('refresh token: ', refreshToken);
       //console.log('profile: ', profile);
       console.log('profile.id: ', profile.id);
       console.log('profile.displayName: ', profile.displayName);
-      User.findOne({ googleID: profile.id }).then((existingUser) => {
-        if (existingUser) {
-          // found the user already in the user collection
-          existingUser.loginCount = existingUser.loginCount ? existingUser.loginCount+1 : 1;
-          existingUser.lastLogin = new Date();
-          existingUser
-            .save()
-            .then(user => done(null, user));
-        } else {
-          // this is a new user so need to add to the user collection
-          new User({
-            googleID: profile.id,
-            displayName: profile.displayName,
-            loginCount: 1,
-            lastLogin: new Date()
-          })
-          .save()
-          .then(user => done(null, user));
-        }
-      });
+      const existingUser = await User.findOne({ googleID: profile.id })
+      if (existingUser) {
+        // found the user already in the user collection
+        existingUser.loginCount = existingUser.loginCount ? existingUser.loginCount+1 : 1;
+        existingUser.lastLogin = new Date();
+        const user = await existingUser.save()
+        done(null, user);
+      } else {
+        // this is a new user so need to add to the user collection
+        const user = await new User({
+          googleID: profile.id,
+          displayName: profile.displayName,
+          loginCount: 1,
+          lastLogin: new Date()
+        }).save()
+        done(null, user);
+      }
     }
   )
 );
